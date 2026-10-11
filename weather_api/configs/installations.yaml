@@ -1,0 +1,12 @@
+# One entry per solar installation.
+#   tilt:    degrees from horizontal (0 = flat, 90 = vertical)
+#   azimuth: Open-Meteo convention, NOT compass degrees:
+#            0 = south, -90 = east, 90 = west
+#   kwp:     installed peak power, in kW
+installations:
+  - user_id: demo_coimbra
+    latitude: 40.2069
+    longitude: -8.42
+    tilt: 30
+    azimuth: 0
+    kwp: 3.5

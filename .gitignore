@@ -2,3 +2,11 @@
 .venv/
 
 Dados/household_power_consumption.txt
+
+# Python
+__pycache__/
+.pytest_cache/
+
+# Forecast pipeline
+data/
+.cache.sqlite
