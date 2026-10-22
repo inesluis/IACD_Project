@@ -1,0 +1,27 @@
+-------- geramos 2 coisas: --------
+A) carga = carga total da casa
+B) PV = produção PV
+
+autoconsumo  = min(carga, PV)
+rede (compra) = max(0, carga − PV)
+excedente = max(0, PV − carga)
+
+-------- dois cenários: --------
+
+A) BASELINE: carga sintética com os eletrodomésticos às horas habituais
+B) Otimizado: a mesma carga, mas com os eletrodomésticos deslocados pelas recomendações 
+do nosso sistema - (TAXA de adesão de 70%, por exemplo)
+
+-------- gerar carga da companhia (duas alternativas): --------
+
+A) bootstrap de dias semelhantes: para cada dia sintético, escolhemos aleatoriamente
+um dia real do histórico com o mesmo mês (ou estação idk) e o mesmo tipo de dia (útil, fds, feriado)
+Depois aplicamos uma pertubação (pequena) tipo +-5-10%. 
+B) perfil médio + resíduo: calcula o perfil médio por (mês, tipo de dia, hora)
+
+depois temos de decompor em carga de base (não se mexe) e eventos de eletrodomésticos
+deslocáveis : potência (kw) x duração do ciclo = energia por ciclo (kWh).
+
+-------- produção PV --------
+
+com base na API weather ... 
