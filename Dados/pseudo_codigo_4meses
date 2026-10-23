@@ -1,0 +1,30 @@
+ENTRADAS
+  pv_previsto[h]  = kWh produzidos pelo painel em cada hora   (scripts da colega)
+  pv_real[h]      = pv_previsto[h] × (1 + ruído)               # ruído ~ Normal(0, 10%), ≥ 0
+  dados baseline históricos (carga_base, eventos, disponibilidade)
+
+1. CONSUMO DOS 4 MESES
+   para cada perfil, para cada dia d de jan–abr 2025:
+       o = dia histórico aleatório com o mesmo mês e o mesmo dia da semana
+       carga_base[d]      = carga_base[o]
+       maquinas[d]        = eventos de o (mesmas horas, nova data)
+       disponibilidade[d] = disponibilidade[o]
+
+2. CENÁRIO SEM O SISTEMA (baseline)
+   consumo[h]    = carga_base[h] + energia das máquinas nas horas habituais
+   do_painel[h]  = min(consumo[h], pv_real[h])
+   companhia[h]  = consumo[h] − do_painel[h]
+
+3. CENÁRIO COM O SISTEMA (otimizado)
+   para cada dia:
+       sol_livre[h] = max(0, pv_previsto[h] − carga_base[h])      # excedente previsto
+       para cada máquina do dia (a que gasta mais primeiro):
+           hora = hora disponível com mais sol_livre
+           se sol_livre[hora] > 0:
+               mudar a máquina para essa hora
+               sol_livre[hora] −= energia da máquina
+   consumo, do_painel, companhia → calculados como no passo 2, com pv_real
+
+4. SAÍDA
+   CSV horário: Datetime, perfil, cenário, consumo, do_painel, companhia
+   Resumo por mês: kWh da companhia, kWh do painel, % do painel, poupança

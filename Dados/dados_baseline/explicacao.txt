@@ -1,0 +1,129 @@
+DADOS BASELINE - DESCRIÇÃO DOS FICHEIROS (dados_baseline.zip)
+=============================================================
+ 
+Perfis (iguais em todos os ficheiros):
+  Perfil_1_Original     - casa real do UCI, sem alterações
+  Perfil_2_Escritorio   - fora de casa 9h-18h nos dias úteis
+  Perfil_3_Familia      - família numerosa (+70% energia, +40% ciclos das máquinas)
+  Perfil_4_Noturno      - turno 22h-7h, dorme 9h-15h
+  Perfil_5_HomeOffice   - teletrabalho nos dias úteis
+
+Máquinas consideradas (as que o utilizador liga manualmente e pode adiar):
+  maq_lavar  - máquina de lavar roupa  (Sub_metering_2 do UCI)
+  maq_secar  - máquina de secar roupa  (Sub_metering_2 do UCI)
+  maq_loica  - máquina da loiça        (Sub_metering_1 do UCI)
+
+IDEIA GERAL
+-----------
+  consumo da casa = carga não deslocável + ciclos das máquinas
+  baseline_total  = carga_base + (eventos, desenhados com ciclos_curvas)
+
+  - carga_base: o que NÃO se pode mexer.
+  - eventos + ciclos_curvas: o que se PODE mexer (as máquinas) e o seu efeito exato.
+  - disponibilidade: PARA ONDE se pode mexer (horas em que a pessoa pode ligar uma máquina).
+ 
+=====================================================================
+1) carga_base.csv  -  carga NÃO deslocável, horária
+=====================================================================
+
+Conteúdo: todo o consumo da casa EXCETO as três máquinas: frigorífico, luzes,
+forno, micro-ondas, TV, termoacumulador, aquecimento, standby...
+Gerado com o método dos perfis (rotina horária + variabilidade real), aplicado
+só a esta parte do consumo.
+
+Uso:
+  - Fica IGUAL no cenário baseline e no cenário otimizado.
+  - Base para as novas datas dos 4 meses sintéticos.
+
+=====================================================================
+2) baseline_total.csv  -  consumo TOTAL da casa, horário
+=====================================================================
+Mesmo formato que carga_base.csv (Datetime x 5 perfis, kW médios = kWh/hora)
+
+Conteúdo: carga_base + máquinas nas horas habituais de cada perfil.
+É o consumo "antes do nosso sistema".
+
+Uso:
+  - Treinar e avaliar o modelo de previsão de consumo  
+  - Cenário de referência para comparar com o cenário otimizado  
+
+=====================================================================
+3) eventos.csv  -  lista de ciclos das máquinas (1 linha por ciclo)
+=====================================================================
+Linhas: 13 842
+Colunas:
+  evento_id          identificador único do evento (ex.: E004512)
+  perfil             perfil a que pertence
+  maquina            maq_lavar | maq_secar | maq_loica
+  ciclo_id           ciclo REAL do UCI usado (liga a ciclos_curvas.csv)
+  origem             real      -> hora real do UCI (Perfil 1 e fins de semana dos perfis 2 e 5)
+                     realocado -> ciclo real, hora de início sorteada segundo a rotina do perfil
+                     extra     -> ciclo adicional (só Perfil_3_Familia)
+  inicio, fim        data/hora de início e de fim (ao minuto)
+  duracao_min        duração do ciclo em minutos
+  energia_kwh        energia total do ciclo (kWh)
+  potencia_media_kw  energia / duração (kW)
+ 
+Ciclos reais detetados (Perfil 1):
+  maq_lavar  ~3,1/semana  ~0,41 kWh/ciclo  ~32 min
+  maq_secar  ~3,8/semana  ~1,82 kWh/ciclo  ~68 min
+  maq_loica  ~5,7/semana  ~1,03 kWh/ciclo  ~114 min
+
+Uso:
+  - É a lista do que o otimizador pode deslocar: para cada evento, escolhe uma nova hora de início.
+  - FR-06: filtrar por "maquina" consoante o que o utilizador selecionou.
+  - NFR-01: cada recomendação fica ligada a um evento_id -> ciclo_id -> dados reais do UCI.
+  - Estatísticas de hábitos para o utilizador (ex.: "80% das lavagens depois das 19h").
+
+[Nota: cada secagem que se segue a uma lavagem (até 4 h depois) foi deslocada em conjunto
+com essa lavagem, mantendo o intervalo real entre as duas.]
+
+=====================================================================
+4) ciclos_curvas.csv  -  curva de potência de cada ciclo, ao minuto
+=====================================================================
+Linhas: 214 010 (2563 ciclos reais)
+Colunas:
+  ciclo_id   liga a eventos.csv
+  minuto     minuto desde o início do ciclo (0, 1, 2, ...)
+  kw         potência nesse minuto (kW)
+
+Exemplo (maq_lavar_0002, início da lavagem):
+  minuto 0-10 -> ~2,2 kW (aquecimento da água)
+  minuto 11+  -> ~0,1 kW (lavagem/centrifugação)
+
+Porque é preciso: as máquinas não consomem de forma uniforme. A máquina de lavar gasta
+quase tudo nos primeiros ~10 min. Ao deslocar um evento, "cola-se" a curva na nova hora,
+minuto a minuto, e soma-se por hora -> sabe-se exatamente quanta energia cai em cada hora
+e quanto dela o painel consegue cobrir. Usar só a potência média daria resultados errados.
+
+Uso:
+  - Construir o consumo horário do cenário otimizado depois de deslocar os eventos.
+  - Reconstruir baseline_total: carga_base + curvas dos eventos (verificado, erro <= 0,001 kW).
+
+=====================================================================
+5) disponibilidade.csv  -  horas em que se pode ligar uma máquina
+=====================================================================
+Mesmo formato que carga_base.csv (Datetime x 5 perfis), com valores 0/1:
+  1 -> a pessoa está em casa e acordada (pode ligar uma máquina)
+  0 -> fora de casa ou a dormir
+
+Definição: hora com peso de atividade >= 50% do máximo desse dia, segundo a rotina do perfil.
+
+Uso:
+  - Janela permitida do otimizador: só recomenda horas com 1.
+  - Com início diferido (timer da máquina): o utilizador liga a máquina numa hora com 1
+    e ela arranca mais tarde (ex.: nas horas de sol). Útil para os perfis Escritório e Noturno,
+    que quase não têm horas de sol disponíveis nos dias úteis.
+  - Pode ser substituída pela janela que o próprio utilizador indicar na aplicação.
+
+
+=====================================================================
+LIMITAÇÕES (a documentar no relatório)
+=====================================================================
+  - Lavagens a frio (sem aquecimento) não são detetadas e ficam na carga não deslocável.
+  - Só 318 das 783 secagens têm uma lavagem associada; as restantes deslocam-se sozinhas.
+  - Lavar e secar partilham o mesmo contador no UCI: a separação é feita por assinatura de
+    potência (secar = potência alta durante mais tempo), por isso pode haver erros pontuais.
+  - O forno pode ocasionalmente ser confundido com a máquina da loiça (mesmo circuito).
+  - O consumo é de uma casa em França; a produção PV será calculada para Portugal (pressuposto).
+  - A carga horária respeita a potência contratada: 6,9 kVA (9,2 kVA no Perfil_3_Familia).

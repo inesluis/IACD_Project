@@ -25,3 +25,7 @@ deslocáveis : potência (kw) x duração do ciclo = energia por ciclo (kWh).
 -------- produção PV --------
 
 com base na API weather ... 
+
+-------- objetivo --------
+
+Pôr as máquinas nas horas com excedente, para que essa energia seja usada em vez de comprada.
