@@ -79,3 +79,50 @@ CREATE TABLE IF NOT EXISTS solar_actual (
     fetched_at      timestamptz NOT NULL,
     PRIMARY KEY (user_id, time)
 );
+
+-- EPREL appliance catalogue, one row per registered model (api/appliances/eprel_sync.py).
+-- Typed columns are filled where the group has them; raw keeps the full record.
+CREATE TABLE IF NOT EXISTS appliance_model (
+    registration_number  bigint PRIMARY KEY,   -- eprelRegistrationNumber
+    product_group        text NOT NULL,        -- EPREL url_code, e.g. 'washingmachines2019'
+    appliance_type       text NOT NULL CHECK (appliance_type IN (
+        'maq_lavar', 'maq_secar', 'maq_loica', 'maq_lavar_secar', 'frigorifico', 'forno',
+        'exaustor', 'ecra', 'ar_condicionado', 'termoacumulador', 'deposito_agua_quente',
+        'aquecedor', 'lampada')),
+    brand                text NOT NULL,        -- supplierOrTrademark, as written
+    brand_key            text NOT NULL,        -- normalised brand
+    model_identifier     text NOT NULL,        -- modelIdentifier, as written
+    model_key            text NOT NULL,        -- normalised model
+    energy_class         text,
+    energy_kwh_cycle     double precision CHECK (energy_kwh_cycle >= 0),
+    programme_minutes    integer          CHECK (programme_minutes >= 0),
+    energy_kwh_annual    double precision CHECK (energy_kwh_annual >= 0),
+    power_on_w           double precision CHECK (power_on_w >= 0),
+    capacity             double precision CHECK (capacity >= 0),
+    capacity_unit        text CHECK (capacity_unit IN ('kg', 'place_settings', 'litres', 'inches', 'kw')),
+    on_market_start      date,
+    on_market_end        date,
+    raw                  jsonb       NOT NULL,
+    fetched_at           timestamptz NOT NULL
+);
+CREATE INDEX IF NOT EXISTS appliance_model_search
+    ON appliance_model (appliance_type, brand_key, model_key);
+
+-- The appliances each user owns, matched to the catalogue (api/appliances/match.py).
+-- Several rows per type are allowed (two TVs, a heater per room).
+CREATE TABLE IF NOT EXISTS user_appliance (
+    id                   bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id              text NOT NULL,
+    appliance_type       text NOT NULL CHECK (appliance_type IN (
+        'maq_lavar', 'maq_secar', 'maq_loica', 'maq_lavar_secar', 'frigorifico', 'forno',
+        'exaustor', 'ecra', 'ar_condicionado', 'termoacumulador', 'deposito_agua_quente',
+        'aquecedor', 'lampada')),
+    input_brand          text NOT NULL,        -- exactly what the user gave
+    input_model          text NOT NULL,
+    registration_number  bigint REFERENCES appliance_model,  -- null when nothing matched
+    match_kind           text NOT NULL CHECK (match_kind IN ('exact', 'close', 'weak', 'none')),
+    score                double precision CHECK (score BETWEEN 0 AND 1),
+    quantity             smallint NOT NULL DEFAULT 1 CHECK (quantity >= 1),
+    matched_at           timestamptz NOT NULL
+);
+CREATE INDEX IF NOT EXISTS user_appliance_user ON user_appliance (user_id);

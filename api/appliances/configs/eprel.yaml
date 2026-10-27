@@ -1,0 +1,138 @@
+# EPREL catalogue: which appliance types and groups to download, and where each
+# typed column of appliance_model comes from in the EPREL record.
+#
+# Paths: "a.b" is field b inside object a, "a[0].b" is field b of the first
+# element of list a. A list of paths is tried in order; the first value that
+# is not null wins. capacity_unit is a fixed text, not a path.
+# Within a type, groups are listed newest regulation first: matching prefers
+# the earlier group when two models score the same.
+# Light sources (lightsources) are left out on purpose: see the design.
+
+api:
+  base_url: "https://eprel.ec.europa.eu/api"
+  page_size: 100       # the API's maximum
+  max_in_flight: 4     # requests running at the same time
+  max_per_second: 4    # EPREL allows 5
+  retries: 4           # waits 2, 4, 8, 16 s
+  timeout_s: 60
+
+types:
+  maq_lavar:           # washing machine
+    groups:
+      washingmachines2019:
+        energy_kwh_cycle: energyConsPerCycle
+        programme_minutes: programmeDurationRated
+        capacity: ratedCapacity
+        capacity_unit: kg
+      washingmachines:
+        energy_kwh_cycle: energyConsumption60FullLoad
+        programme_minutes: programmeTime60FullLoad
+        energy_kwh_annual: energyAnnual
+        capacity: ratedCapacity
+        capacity_unit: kg
+
+  maq_secar:           # tumble dryer
+    groups:
+      tumbledryers20232534:
+        energy_kwh_cycle: energyConsDry
+        programme_minutes: programDurationRated
+        capacity: ratedCapacity
+        capacity_unit: kg
+      tumbledriers:
+        energy_kwh_cycle: energyConsELEFL
+        programme_minutes: programmeTimeFL
+        energy_kwh_annual: weightedEnergyAnnual
+        capacity: capacityCotton
+        capacity_unit: kg
+
+  maq_loica:           # dishwasher
+    groups:
+      dishwashers2019:
+        energy_kwh_cycle: energyCons
+        programme_minutes: programmeDuration
+        capacity: ratedCapacity
+        capacity_unit: place_settings
+      dishwashers:
+        energy_kwh_cycle: energyConsumptionStandardCycle
+        programme_minutes: cycleTime
+        energy_kwh_annual: energyAnnual
+        capacity: ratedCapacity
+        capacity_unit: place_settings
+
+  maq_lavar_secar:     # washer-dryer
+    groups:
+      washerdriers2019:
+        energy_kwh_cycle: energyConsumptionWashAndDry
+        programme_minutes: programDurationRatedWashAndDry
+        capacity: ratedCapacityWash
+        capacity_unit: kg
+      washerdriers:
+        energy_kwh_cycle: cycles[0].energyConsWashAndDry
+        programme_minutes: cycles[0].washTime
+        energy_kwh_annual: energyAnnualWashAndDry
+        capacity: cycles[0].capacityWash
+        capacity_unit: kg
+
+  frigorifico:         # fridge, freezer
+    groups:
+      refrigeratingappliances2019:
+        energy_kwh_annual: energyConsAnnual
+        capacity: totalVolume
+        capacity_unit: litres
+      refrigeratingappliances:
+        energy_kwh_annual: energyConsAnnual
+
+  forno:               # oven (first cavity only)
+    groups:
+      ovens:
+        energy_kwh_cycle:
+          - cavities[0].energyConsumptionCycle
+          - cavities[0].energyConsumptionCycleFanForced
+        capacity: cavities[0].volume
+        capacity_unit: litres
+
+  exaustor:            # range hood
+    groups:
+      rangehoods:
+        energy_kwh_annual: energyAnnual
+
+  ecra:                # TV, monitor
+    groups:
+      electronicdisplays:
+        power_on_w: powerOnModeSDR
+        capacity: diagonalInch
+        capacity_unit: inches
+      televisions:
+        energy_kwh_annual: energyAnnual
+        power_on_w: energyConsumption
+        capacity: diagonalInch
+        capacity_unit: inches
+
+  ar_condicionado:     # air conditioner (yearly kWh = cooling)
+    groups:
+      airconditioners:
+        energy_kwh_annual: coolingCharacteristics.annualElectricityConsumption
+        capacity: coolingDesignLoad
+        capacity_unit: kw
+
+  termoacumulador:     # water heater
+    groups:
+      waterheaters:
+        energy_kwh_annual: declaredLoadProfileWaterHeatingAnnualElectricityCons
+
+  deposito_agua_quente:  # hot water storage tank
+    groups:
+      hotwaterstoragetanks:
+        capacity: solarTankVolumeLiters
+        capacity_unit: litres
+
+  aquecedor:           # local space heater
+    groups:
+      localspaceheaters:
+        capacity: directHeatOutput
+        capacity_unit: kw
+
+  lampada:             # lamp, old label (kWh per 1000 h = average W)
+    groups:
+      lamps:
+        power_on_w: weightedEnergyConsumption

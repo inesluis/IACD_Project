@@ -105,11 +105,54 @@ complete yet.
 
     python -m api.weather.weather_history --start 2024-01-01 --end 2024-12-31
 
+## Appliance catalogue
+
+The catalogue of household appliances comes from EPREL, the EU energy label
+database. It covers 13 appliance types in 19 EPREL groups: washing machines
+(`maq_lavar`), tumble dryers (`maq_secar`), dishwashers (`maq_loica`),
+washer-dryers, fridges, ovens, range hoods, TVs and monitors, air
+conditioners, water heaters, hot water tanks, space heaters and lamps. Light
+sources are left out. The types, groups and the fields read from each record
+are in `api/appliances/configs/eprel.yaml`.
+
+The download needs an EPREL API key. Put it in `.env`:
+
+    EPREL_API_KEY=<your key>
+
+Then download the catalogue into the table `appliance_model`:
+
+    python -m api.appliances.eprel_sync                   # all 19 groups, about 40 minutes
+    python -m api.appliances.eprel_sync --type maq_lavar  # one appliance type
+    python -m api.appliances.eprel_sync --group ovens     # one EPREL group
+
+Each model is saved with a few searchable columns (brand, model, energy
+class, kWh per cycle or per year, power, size) and its full EPREL record in
+`raw`. Every page is saved as it arrives, so an interrupted run keeps what it
+saved; running again updates the stored models. At the end, each group lists
+how many records lacked each field.
+
+To find the catalogue model closest to an appliance, and optionally store it
+for a user in the table `user_appliance`:
+
+    python -m api.appliances.match --type maq_lavar --brand "LG Electronics" --model "F4WV308S4"
+    python -m api.appliances.match --user demo_coimbra --type ecra --brand "Samsung" --model "UE55TU7172" --add
+
+The brand and model are compared ignoring case, accents, spaces, punctuation
+and company words such as "Inc." or "GmbH". The result says how far to trust
+it:
+
+| Result | Meaning |
+|---|---|
+| `exact` | the same model |
+| `close` | a very similar name (score at least 0.8), e.g. without a suffix like `/S3` |
+| `weak` | the most similar model of that brand, but not very similar |
+| `none` | no models of that brand and type; similar brand names are suggested (e.g. "LG" suggests "LG Electronics") |
+
 ## Tests
 
 From the repository root:
 
-    python -m pytest api/weather/tests
+    python -m pytest api/weather/tests api/appliances/tests
 
 The tests that need the database are skipped unless `TEST_DATABASE_URL` is
 set (see `.env.example`). They roll back everything they write.
