@@ -2,9 +2,11 @@ requests
 responses
 pandas
 pytest
-pyarrow
 openmeteo-requests
 requests-cache
 retry-requests
 numpy
 pyyaml
+matplotlib
+psycopg[binary]
+python-dotenv

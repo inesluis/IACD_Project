@@ -1,0 +1,65 @@
+url: "https://api.open-meteo.com/v1/forecast"
+
+# Only used by the notebook in tests/. The pipeline reads the location of
+# each installation from installations.yaml.
+latitude: 40.2069
+longitude: -8.42
+
+# temperature_2m stays first: the notebook reads variable 0 as temperature.
+hourly:
+  - temperature_2m
+  - global_tilted_irradiance
+  - wind_speed_10m
+
+# Days after the run day the forecast covers in full (UTC); one more day is fetched.
+# A Sunday run covers Monday 00:00 to the next Sunday 23:00.
+forecast_days: 7
+
+# Change model_version whenever the formula or a constant below changes.
+model_version: physical-v1
+constants:
+  noct: 45.0      # nominal operating cell temperature, in C
+  gamma: -0.004   # power lost per C above 25 C in the cell
+  pr: 0.80        # performance ratio: inverter, cabling and soiling losses
+
+# Forecast check (forecast_check.py): what the panels "produced" is simulated as
+# the Sunday forecast of each hour x (1 + noise), noise ~ N(0, noise_std), >= 0.
+# Replay rebuilds a past Sunday forecast from Open-Meteo's previous runs.
+check:
+  noise_std: 0.10
+  previous_runs_url: "https://previous-runs-api.open-meteo.com/v1/forecast"
+  source: simulated-noise
+
+# Weather history: ERA5 reanalysis, loaded by weather_history.py.
+# The default archive model fills recent days with forecasts, so the model is
+# set explicitly. ERA5 is published about 6 days late; lag_days leaves a margin.
+# Every name in hourly must be a column of weather_history (database/schema.sql).
+history:
+  url: "https://archive-api.open-meteo.com/v1/archive"
+  model: era5_seamless
+  lag_days: 7
+  start_date: "2025-01-01"
+  hourly:
+    - temperature_2m
+    - relative_humidity_2m
+    - shortwave_radiation
+    - direct_radiation
+    - diffuse_radiation
+    - direct_normal_irradiance
+    - global_tilted_irradiance
+    - terrestrial_radiation
+    - shortwave_radiation_instant
+    - direct_radiation_instant
+    - diffuse_radiation_instant
+    - direct_normal_irradiance_instant
+    - global_tilted_irradiance_instant
+    - terrestrial_radiation_instant
+    - cloud_cover
+    - cloud_cover_low
+    - cloud_cover_mid
+    - cloud_cover_high
+    - wind_speed_10m
+    - wind_speed_80m
+    - wind_speed_100m
+    - wind_speed_120m
+    - precipitation

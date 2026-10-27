@@ -1,8 +1,8 @@
 import pytest
 
-from weather_api.pv_model import estimate_energy
+from api.weather.solar_forecast import estimate_energy
 
-from conftest import CONSTANTS, KWP
+from api.weather.tests.conftest import CONSTANTS, KWP
 
 
 def test_no_sun_gives_no_energy(weather):
